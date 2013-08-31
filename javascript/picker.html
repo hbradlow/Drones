@@ -1,0 +1,33 @@
+<html>
+    <head>
+    </head>
+    <body>
+        <div id="picker_frame" style="margin:0; padding:0;position:absolute;top:0px;left:0px;">
+            <div id="thing" style="z-index:10;width:40px;height:40px;background:red;position:absolute;top:100px;left:100px;">
+            </div>
+            <img id="picker" src="http://localhost:8000/picker_image" style="z-index:0;margin:0; padding: 0; position:absolute; top:0px; left:0px;">
+            </img>
+        </div>
+
+        <script src="http://localhost:8000/jquery.min.js"></script>
+        <script type="text/javascript">
+                $("#picker").click(function(e){
+                    var x = e.pageX;
+                    var y = e.pageY;
+
+                    var size = 15;
+
+                    var min_x = x-size;
+                    var min_y = y-size;
+                    var max_x = x+size;
+                    var max_y = y+size;
+
+                    $("#thing").css("top",min_y+"px");
+                    $("#thing").css("left",min_x+"px");
+                    $("#thing").css("height",size*2+"px");
+                    $("#thing").css("width",size*2+"px");
+                    $.get('http://localhost:8000/set_window', {'x':x,'y':y});
+                });
+        </script>
+    </body>
+</html>

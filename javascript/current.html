@@ -1,0 +1,19 @@
+<html>
+    <head>
+    </head>
+    <body>
+        <div id="picker_frame" style="margin:0; padding:0;position:absolute;top:0px;left:0px;">
+            <img id="output" src="http://localhost:8000/output_image" style="z-index:0;margin:0; padding: 0; position:absolute; top:0px; left:0px;">
+            </img>
+        </div>
+
+        <script src="http://localhost:8000/jquery.min.js"></script>
+        <script type="text/javascript">
+            window.setInterval(function()
+            {
+                console.log("Refresh");
+                document.getElementById('output').src = "http://localhost:8000/output_image?random="+new Date().getTime();
+            }, 500);
+        </script>
+    </body>
+</html>
