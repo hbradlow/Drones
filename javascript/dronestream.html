@@ -1,0 +1,65 @@
+<html>
+    <head>
+        <script src="/dronestream/nodecopter-client.js" type="text/javascript" charset="utf-8"></script>
+    </head>
+    <body>
+        <div id="picker_frame" style="margin:0; padding:0;position:absolute;top:0px;left:0px;">
+            <div id="thing" style="z-index:10;width:40px;height:40px;background:red;position:absolute;top:100px;left:100px;">
+            </div>
+            <div id="picker" width="640" height="320" style="margin:0; padding: 0; position:absolute; top:0px; left:0px;"></div>
+        </div>
+        <div id="land" style="position:absolute;top:20px;left:700px;background:red; height:50px;width:50px;"></div>
+        <div id="stop" style="position:absolute;top:100px;left:700px;background:orange; height:50px;width:50px;"></div>
+        <div id="takeoff" style="position:absolute;top:180px;left:700px;background:green; height:50px;width:50px;"></div>
+        <div id="back" style="position:absolute;top:260px;left:700px;background:blue; height:50px;width:50px;"></div>
+
+
+        <script src="http://localhost:8000/jquery.min.js"></script>
+        <script type="text/javascript">
+                new NodecopterStream(document.getElementById("picker"));
+                $("#picker_frame").mouseup(function(e){
+                    console.log("up");
+                    $.get('http://localhost:8000/pause');
+                });
+                $("#picker_frame").mousedown(function(e){
+                    console.log("down");
+                    $.get('http://localhost:8000/forward');
+                });
+                $("body").keypress(function(e){
+                    if(e.keyCode == 32){
+                        $.get('http://localhost:8000/land');
+                    }
+                });
+                $("#takeoff").click(function(e){
+                    $.get('http://localhost:8000/takeoff');
+                });
+                $("#stop").click(function(e){
+                    $.get('http://localhost:8000/stop');
+                });
+                $("#back").click(function(e){
+                    $.get('http://localhost:8000/back');
+                });
+                $("#land").click(function(e){
+                    $.get('http://localhost:8000/land');
+                });
+                $("#picker_frame").mousemove(function(e){
+                    var x = e.pageX;
+                    var y = e.pageY;
+
+                    var size = 15;
+
+                    var min_x = x-size;
+                    var min_y = y-size;
+                    var max_x = x+size;
+                    var max_y = y+size;
+
+                    $("#thing").css("top",min_y+"px");
+                    $("#thing").css("left",min_x+"px");
+                    $("#thing").css("height",size*2+"px");
+                    $("#thing").css("width",size*2+"px");
+                    console.log({'x':x,'y':y});
+                    $.get('http://localhost:8000/track', {'x':x,'y':y});
+                });
+        </script>
+    </body>
+</html>

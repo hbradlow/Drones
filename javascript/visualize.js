@@ -1,4 +1,8 @@
-var arDrone = require('ar-drone');
-var client  = arDrone.createClient();
+var http = require("http");
 
-require('ar-drone-png-stream')(client, { port: 8000 });
+var server = http.createServer(function(req, res) {
+  require("fs").createReadStream(__dirname + "/dronestream.html").pipe(res);
+});
+
+require("dronestream").listen(server); 
+server.listen(5555);

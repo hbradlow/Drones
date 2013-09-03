@@ -6,21 +6,22 @@ var fs = require('fs');
 var sys = require('sys')
 var exec = require('child_process').exec;
 var pid = require('./pid.js');
+var drone_video = require('./node-drone-video/bin/drone-video');
 //set up video on port 5000
-require('ar-drone-png-stream')(client, { port: 5000 });
+//require('ar-drone-png-stream')(pid.client, { port: 5000 });
 
-var pngStream = pid.client.getPngStream();
+//var pngStream = pid.client.getPngStream();
 var s = new cv.ImageStream();
 var current_image = null;
 var color = null;
 var counter = 0;
 
-var safety = false;
+var safety = true;
 var output = null;
 var current = null;
 
 
-http.createServer(function(req, res){
+var server = http.createServer(function(req, res){
   var request = url.parse(req.url, true);
   var action = request.pathname;
 
@@ -29,30 +30,82 @@ http.createServer(function(req, res){
      res.writeHead(200, {'Content-Type': 'image/jpg' });
      res.end(img, 'binary');
   }
-  if (action == '/output_image') {
+  else if (action == '/output_image') {
      var img = fs.readFileSync('./output.jpg');
      res.writeHead(200, {'Content-Type': 'image/jpg' });
      res.end(img, 'binary');
      console.log("output_image");
   }
-  if (action == '/picker_image') {
+  else if (action == '/picker_image') {
      var img = fs.readFileSync('./pic.jpg');
      res.writeHead(200, {'Content-Type': 'image/jpg' });
      res.end(img, 'binary');
   }
-  if (action == '/jquery.min.js') {
+  else if (action == '/jquery.min.js') {
      var js = fs.readFileSync('./jquery.min.js');
          res.writeHead(200, {'Content-Type': 'text/javascript' });
        res.end(js);
     }
-    if (action == '/track'){
+      else if (action == '/video_stream'){
+        console.log("video!");
+      require("fs").createReadStream(__dirname + "/dronestream.html").pipe(res);
+    }
+    else if (action == '/track'){
         var x = request.query.x;
         var y = request.query.y;
+        console.log(x + "," + y);
         if(safety){
             pid.track([x,y]);
         }
+         res.writeHead(200, {'Content-Type': 'text/javascript' });
+       res.end("//nothing");
     }
-  if (action == '/set_window'){
+      else if (action == '/takeoff'){
+          console.log("takeoff");
+          if(safety){
+            pid.client.takeoff();
+          }
+         res.writeHead(200, {'Content-Type': 'text/javascript' });
+       res.end("//nothing");
+      }
+      else if (action == '/stop'){
+          console.log("stop");
+            pid.client.stop();
+            safety = false;
+         res.writeHead(200, {'Content-Type': 'text/javascript' });
+       res.end("//nothing");
+      }
+      else if (action == '/back'){
+          console.log("back");
+          if(safety){
+            pid.back(.1);
+        }
+         res.writeHead(200, {'Content-Type': 'text/javascript' });
+       res.end("//nothing");
+      }
+      else if (action == '/pause'){
+          console.log("stop");
+            pid.stop();
+         res.writeHead(200, {'Content-Type': 'text/javascript' });
+       res.end("//nothing");
+      }
+      else if (action == '/forward'){
+          console.log("forward");
+          if(safety){
+            pid.forward(.1);
+        }
+         res.writeHead(200, {'Content-Type': 'text/javascript' });
+       res.end("//nothing");
+      }
+      else if (action == '/land'){
+          console.log("land");
+            pid.client.land();
+            shutdown();
+            safety = false;
+         res.writeHead(200, {'Content-Type': 'text/javascript' });
+       res.end("//nothing");
+      }
+    else if (action == '/set_window'){
       var size = 10;
       var x = request.query.x;
       var y = request.query.y;
@@ -71,7 +124,15 @@ http.createServer(function(req, res){
          res.writeHead(200);
        res.end(str);
     }
-}).listen(8000, '127.0.0.1');
+});
+
+
+var record_functions = drone_video.record(pid.client);
+var shutdown = record_functions[0];
+var parser = record_functions[1];
+
+require("./node-dronestream/lib/server").listen(server,{},parser); 
+server.listen(8000, '127.0.0.1');
 
 function getMethods(obj) {
   var result = [];
@@ -87,11 +148,7 @@ function getMethods(obj) {
   return result;
 }
 
-if(safety){
-    pid.client.takeoff();
-}
 /*
-
 s.on('data', function(mat){
     if(current_image==null)
         console.log("Running...");
@@ -113,15 +170,6 @@ s.on('data', function(mat){
     if(color!=null && counter%5==0){
         function puts(error, stdout, stderr) { 
             if(stdout.trim()){
-                /*
-                var objs = JSON.parse(stdout);
-                console.log(objs);
-                for(var i = 0; i<objs.length; i++){
-                    var obj = objs[i];
-                    first.rectangle([obj[0],obj[1]],[obj[0]+obj[2],obj[1]+obj[3]]);
-                }
-                first.save("./saved.jpg");
-                */
                 var center = JSON.parse(stdout);
                 if(safety){
                     pid.track(center);
@@ -137,6 +185,6 @@ s.on('data', function(mat){
     }
     }
 })
-/*
+*/
 
-pngStream.pipe(s);
+//pngStream.pipe(s);
