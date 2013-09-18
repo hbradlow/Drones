@@ -8,7 +8,7 @@ root = tk.Tk()
 vis = None
 
 video_stream = cv.CaptureFromCAM(0)
-tracker = Tracker(video_stream,filter_boxes=True)
+tracker = Tracker(video_stream, filter_boxes=True, downsample=3)
 ticker = Ticker()
 
 def draw():
@@ -17,7 +17,8 @@ def draw():
         vis = Visualizer(root, tracker.size[0], tracker.size[1])
 
     vis.clear()
-    vis.add_drawable(Box2D([tracker.box.x,tracker.box.y],[tracker.box.w,tracker.box.h]))
+    vis.add_drawable(Box2D([tracker.box.x,tracker.box.y],
+                            [tracker.box.w,tracker.box.h]))
     vis.draw()
     root.update()
 

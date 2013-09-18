@@ -32,7 +32,7 @@ class Tracker:
         self.filter_alpha = filter_alpha
 
     def filter(self,box):
-        """Kalman filter the stream of boxes."""
+        """Exponential average of the stream of boxes."""
         return self.filter_alpha*box + (1-self.filter_alpha)*self.box
 
     def get_downsampled_frame(self):
