@@ -39,6 +39,9 @@ class Tracker:
         """Pull a frame from the video stream and downsample it."""
         img = cv.QueryFrame(self.video_stream)
 
+        if not img:
+            return None
+
         size = cv.GetSize(img)
         thumbnail = cv.CreateImage((size[0] / self.downsample, 
                                         size[1] / self.downsample),
@@ -53,17 +56,19 @@ class Tracker:
         """Read a new image and detect the biggest pedestrian."""
         img = self.get_downsampled_frame()
 
-        # run the OpenCV HOG detection algorithm
-        storage = CreateMemStorage(0)
-        found = list(HOGDetectMultiScale(img, storage, win_stride=(8,8),
-            padding=(32,32), scale=1.05, group_threshold=2))
+        if img:
+            # run the OpenCV HOG detection algorithm
+            storage = CreateMemStorage(0)
+            # TODO: make these numbers configurable
+            found = list(HOGDetectMultiScale(img, storage, win_stride=(8,8),
+                padding=(32,32), scale=1.05, group_threshold=2))
 
-        if found:
-            # pull out the biggest box
-            biggest_box = max(found, key=lambda x: x[1][0]+x[1][1])
-            (x, y), (w, h) = biggest_box
+            if found:
+                # pull out the biggest box
+                biggest_box = max(found, key=lambda x: x[1][0]+x[1][1])
+                (x, y), (w, h) = biggest_box
 
-            if self.filter_boxes:
-                self.box = self.filter(Box(x,y,w,h))
-            else:
-                self.box = Box(x,y,w,h)
+                if self.filter_boxes:
+                    self.box = self.filter(Box(x,y,w,h))
+                else:
+                    self.box = Box(x,y,w,h)

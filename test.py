@@ -26,8 +26,9 @@ while True:
     try:
         tracker.update()
         ticker.tick()
-        print tracker.box
-        draw()
+        #print tracker.box
+        if tracker.size:
+            draw()
 
     except KeyboardInterrupt:
         break
