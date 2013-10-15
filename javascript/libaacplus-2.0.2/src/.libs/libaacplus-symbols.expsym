@@ -1,6 +1,0 @@
-_aacplusEncGetCurrentConfiguration
-_aacplusEncSetConfiguration
-_aacplusEncOpen
-_aacplusEncGetDecoderSpecificInfo
-_aacplusEncEncode
-_aacplusEncClose
