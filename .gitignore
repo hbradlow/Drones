@@ -2,3 +2,4 @@ venv
 *.py[co]
 *.swp
 *.mp4
+*.o
