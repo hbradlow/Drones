@@ -135,7 +135,7 @@ int main(int argc, char* argv[])
 
         //find countours
         FindBlobs(binary,blobs);
-        cv::Mat output = cv::Mat::zeros(filtered.size(), CV_8UC3);
+        cv::Mat output = cv::Mat::zeros(binary.size(), CV_8UC3);
 
         for(size_t i=0; i < blobs.size(); i++) {
             unsigned char r = 255 * (rand()/(1.0 + RAND_MAX));
