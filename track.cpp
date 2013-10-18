@@ -142,13 +142,15 @@ int main(int argc, char* argv[])
             unsigned char g = 255 * (rand()/(1.0 + RAND_MAX));
             unsigned char b = 255 * (rand()/(1.0 + RAND_MAX));
 
-            for(size_t j=0; j < blobs[i].size(); j++) {
-                int x = blobs[i][j].x;
-                int y = blobs[i][j].y;
+            if((int)blobs[i].size() < 1000){
+                for(size_t j=0; j < blobs[i].size(); j++) {
+                    int x = blobs[i][j].x;
+                    int y = blobs[i][j].y;
 
-                output.at<cv::Vec3b>(y,x)[0] = b;
-                output.at<cv::Vec3b>(y,x)[1] = g;
-                output.at<cv::Vec3b>(y,x)[2] = r;
+                    output.at<cv::Vec3b>(y,x)[0] = b;
+                    output.at<cv::Vec3b>(y,x)[1] = g;
+                    output.at<cv::Vec3b>(y,x)[2] = r;
+                }
             }
         }
 
