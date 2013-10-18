@@ -31,7 +31,7 @@ void trackObject(IplImage* imgThresh){
     double area = cvGetCentralMoment(moments, 0, 0);
 
      // if the area<1000, I consider that the there are no object in the image and it's because of the noise, the area is not zero 
-    if(area>100){
+    if(area>10){
         // calculate the position of the ball
         int posX = moment10/area;
         int posY = moment01/area;        
