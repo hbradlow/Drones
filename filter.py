@@ -4,6 +4,8 @@ import IPython
 
 cam = Camera()
 t = Ticker()
+mv = 0
+alpha = .2
 
 def maxValue(self,locations=False):
     if(locations):
@@ -18,9 +20,10 @@ def maxValue(self,locations=False):
 while True:
     img = cam.getImage()
     gray = img.grayscale()
-    red = img.splitChannels()[0]
+    red = img.splitChannels()[1]
     subtracted = red-gray
-    subtracted *= 255/maxValue(subtracted)
+    mv = mv*(1-alpha) + maxValue(subtracted)*alpha
+    subtracted *= 255/mv
     binary = subtracted.binarize(200).invert()
 
     blobs = binary.findBlobs()
@@ -36,5 +39,7 @@ while True:
         centroid_y /= total_area
         binary.drawCircle((centroid_x,centroid_y),10,color=Color.GREEN)
 
-    t.tick()
+    #subtracted.show()
     binary.show()
+    #img.show()
+    t.tick()
