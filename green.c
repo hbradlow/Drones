@@ -2,11 +2,26 @@
 #include <highgui.h>
 #include <stdio.h>
 
+#define CAM 0
+
 float filteredX = 0;
 float filteredY = 0;
+float filtered_area = 0;
 
 float alpha = .5;
+float area_alpha = .1;
 
+IplImage* GetGreenThresholdedImageRGB(IplImage* imgRGB){       
+    IplImage* imgThresh=cvCreateImage(cvGetSize(imgRGB),IPL_DEPTH_8U, 1);
+    int diff = 30;
+    cvInRangeS(imgRGB, cvScalar(143-diff,244-diff,176-diff,0), cvScalar(143+diff,244+diff,176+diff,0), imgThresh); 
+    return imgThresh;
+}
+IplImage* GetSoftThresholdedImageRGB(IplImage* imgRGB){       
+    IplImage* imgThresh=cvCreateImage(cvGetSize(imgRGB),IPL_DEPTH_8U, 1);
+    cvInRangeS(imgRGB, cvScalar(100,100,100,0), cvScalar(256,256,256,0), imgThresh); 
+    return imgThresh;
+}
 IplImage* GetThresholdedImageRGB(IplImage* imgRGB){       
     IplImage* imgThresh=cvCreateImage(cvGetSize(imgRGB),IPL_DEPTH_8U, 1);
     cvInRangeS(imgRGB, cvScalar(200,200,200,0), cvScalar(256,256,256,0), imgThresh); 
@@ -22,7 +37,7 @@ void trackObject(IplImage* imgThresh){
     double area = cvGetCentralMoment(moments, 0, 0);
 
     // if the area<1000, I consider that the there are no object in the image and it's because of the noise, the area is not zero 
-    if(area>10){
+    if(area>0){
         // calculate the position of the ball
         int posX = moment10/area;
         int posY = moment01/area;        
@@ -30,6 +45,8 @@ void trackObject(IplImage* imgThresh){
 
         filteredX = alpha*posX + (1-alpha)*filteredX;
         filteredY = alpha*posY + (1-alpha)*filteredY;
+        filtered_area = area*area_alpha + (1-area_alpha)*filtered_area;
+        printf("AREA %f\n",filtered_area);
     }
     else{
         printf("Found nothing\n");
@@ -40,7 +57,13 @@ void trackObject(IplImage* imgThresh){
 
 int main(){
     CvCapture* capture =0;       
+#if CAM
     capture = cvCaptureFromCAM(0);
+#else
+    capture = cvCaptureFromFile("data/1.MOV");
+#endif
+    cvSetCaptureProperty( capture, CV_CAP_PROP_FRAME_WIDTH, 320);
+    cvSetCaptureProperty( capture, CV_CAP_PROP_FRAME_HEIGHT, 240);
     if(!capture){
         printf("Capture failure\n");
         return -1;
@@ -53,6 +76,8 @@ int main(){
 
     cvNamedWindow("Video",0);     
     cvNamedWindow("Ball",0);
+    cvNamedWindow("Green",0);
+    cvNamedWindow("Sub",0);
 
     while(1){
         frame = cvQueryFrame(capture);           
@@ -60,32 +85,65 @@ int main(){
         if(!frame) break;
         frame=cvCloneImage(frame); 
 
+#if CAM
+        IplImage *small = cvCloneImage(frame);
+#else
         IplImage *small = cvCreateImage(
+                            cvSize(cvGetSize(frame).width/8.0,
+                                cvGetSize(frame).height/8.0),
+                            IPL_DEPTH_8U, 
+                            3);
+        IplImage *tmp2 = cvCreateImage(
+                            cvSize(cvGetSize(frame).width/4.0,
+                                cvGetSize(frame).height/4.0),
+                            IPL_DEPTH_8U, 
+                            3);
+        IplImage *tmp = cvCreateImage(
                             cvSize(cvGetSize(frame).width/2.0,
                                 cvGetSize(frame).height/2.0),
                             IPL_DEPTH_8U, 
                             3);
-        cvPyrDown(frame,small,CV_GAUSSIAN_5x5);
+        cvPyrDown(frame,tmp,CV_GAUSSIAN_5x5);
+        cvPyrDown(tmp,tmp2,CV_GAUSSIAN_5x5);
+        cvPyrDown(tmp2,small,CV_GAUSSIAN_5x5);
+#endif
 
         IplImage *red = cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
         IplImage *green = cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
         IplImage *blue = cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
         IplImage *sub = cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
+        IplImage *sub_thresh = cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
         IplImage *gray = cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
         IplImage *thresh= cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
+        IplImage *green_thresh= cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
+        IplImage *edges= cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
 
         cvSplit(small,blue,green,red,NULL);
         cvCvtColor(small,gray,CV_BGR2GRAY);
         cvSub(green,gray,sub,NULL);
         cvNormalize(sub,sub, 0, 255, CV_MINMAX, CV_8UC1);
+        cvCanny(sub,edges,240,250,3);
 
         thresh = GetThresholdedImageRGB(sub);
-        trackObject(thresh);
+        cvDilate(thresh,green_thresh,NULL,25);
+        cvAnd(sub,green_thresh,green_thresh,NULL);
+        green_thresh = GetSoftThresholdedImageRGB(green_thresh);
+
+        cvDilate(green_thresh,green_thresh,NULL,5);
+        cvErode(green_thresh,green_thresh,NULL,5);
+
+        trackObject(green_thresh);
 
         cvRectangle(small,cvPoint(filteredX-10,filteredY-10),cvPoint(filteredX+10,filteredY+10),cvScalar(0xff,0x00,0x00,0x00),5,8,0);
 
+
+        //cvSetImageROI(sub,cvRect(filteredX-50,filteredY-50,filteredX+50,filteredY+50));
+        //sub_thresh = GetSoftThresholdedImageRGB(sub);
+
         cvShowImage("Video", small);
         cvShowImage("Ball", thresh);
+        cvShowImage("Green", green_thresh);
+        cvShowImage("Sub", sub);
 
         //Clean up used images
         cvReleaseImage(&frame);
@@ -94,8 +152,11 @@ int main(){
         cvReleaseImage(&green);
         cvReleaseImage(&blue);
         cvReleaseImage(&sub);
+        cvReleaseImage(&sub_thresh);
         cvReleaseImage(&gray);
         cvReleaseImage(&thresh);
+        cvReleaseImage(&green_thresh);
+        cvReleaseImage(&edges);
 
         //Wait 10mS
         int c = cvWaitKey(10);
