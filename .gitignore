@@ -5,3 +5,4 @@ venv
 *.o
 data
 build
+.DS_Store
