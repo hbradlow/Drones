@@ -11,15 +11,9 @@ float filtered_area = 0;
 float alpha = .5;
 float area_alpha = .1;
 
-IplImage* GetGreenThresholdedImageRGB(IplImage* imgRGB){       
-    IplImage* imgThresh=cvCreateImage(cvGetSize(imgRGB),IPL_DEPTH_8U, 1);
-    int diff = 30;
-    cvInRangeS(imgRGB, cvScalar(143-diff,244-diff,176-diff,0), cvScalar(143+diff,244+diff,176+diff,0), imgThresh); 
-    return imgThresh;
-}
 IplImage* GetSoftThresholdedImageRGB(IplImage* imgRGB){       
     IplImage* imgThresh=cvCreateImage(cvGetSize(imgRGB),IPL_DEPTH_8U, 1);
-    cvInRangeS(imgRGB, cvScalar(100,100,100,0), cvScalar(256,256,256,0), imgThresh); 
+    cvInRangeS(imgRGB, cvScalar(150,150,150,0), cvScalar(256,256,256,0), imgThresh); 
     return imgThresh;
 }
 IplImage* GetThresholdedImageRGB(IplImage* imgRGB){       
@@ -109,20 +103,23 @@ int main(){
 #endif
 
         IplImage *red = cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
+        IplImage *yuv = cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 3);
         IplImage *green = cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
-        IplImage *blue = cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
         IplImage *sub = cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
         IplImage *sub_thresh = cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
         IplImage *gray = cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
         IplImage *thresh= cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
         IplImage *green_thresh= cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
-        IplImage *edges= cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
+        IplImage *solid= cvCreateImage(cvGetSize(small),IPL_DEPTH_8U, 1);
 
-        cvSplit(small,blue,green,red,NULL);
-        cvCvtColor(small,gray,CV_BGR2GRAY);
-        cvSub(green,gray,sub,NULL);
+
+        cvCvtColor(small,yuv,CV_BGR2YCrCb);
+        cvSplit(yuv,gray,green,red,NULL);
+        cvAdd(red,green,red,NULL);
+
+        cvSet(solid,cvScalar(255),NULL);
+        cvSub(solid,red,sub,NULL);
         cvNormalize(sub,sub, 0, 255, CV_MINMAX, CV_8UC1);
-        cvCanny(sub,edges,240,250,3);
 
         thresh = GetThresholdedImageRGB(sub);
         cvDilate(thresh,green_thresh,NULL,25);
@@ -137,26 +134,21 @@ int main(){
         cvRectangle(small,cvPoint(filteredX-10,filteredY-10),cvPoint(filteredX+10,filteredY+10),cvScalar(0xff,0x00,0x00,0x00),5,8,0);
 
 
-        //cvSetImageROI(sub,cvRect(filteredX-50,filteredY-50,filteredX+50,filteredY+50));
-        //sub_thresh = GetSoftThresholdedImageRGB(sub);
-
         cvShowImage("Video", small);
         cvShowImage("Ball", thresh);
         cvShowImage("Green", green_thresh);
-        cvShowImage("Sub", sub);
+        cvShowImage("Sub", red);
 
         //Clean up used images
         cvReleaseImage(&frame);
         cvReleaseImage(&small);
         cvReleaseImage(&red);
         cvReleaseImage(&green);
-        cvReleaseImage(&blue);
         cvReleaseImage(&sub);
         cvReleaseImage(&sub_thresh);
         cvReleaseImage(&gray);
         cvReleaseImage(&thresh);
         cvReleaseImage(&green_thresh);
-        cvReleaseImage(&edges);
 
         //Wait 10mS
         int c = cvWaitKey(10);
