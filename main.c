@@ -139,10 +139,25 @@ void engineLKT() {
 		printf("%+6.1f %+6.1f f: %3d/%3d t: %5.1f\n", vector.x * 5.0f, vector.y * 5.0f, number_of_vectors, number_of_features, deltaT);
 }
 
+//persistent variables across multiple frames
+//filtered variables
+float filtered_min = 0;
+float filtered_max = 255;
+float filtered_x = 0;
+float filtered_y = 0;
+float filtered_area = 0;
+
+//filter parameters
+float location_alpha = .3;
+float area_alpha = .3;
+float norm_alpha = .5;
+
 void engineHeadband() {
 	//cvInputGrey has the grey image
-	//uvInputGrey has the grey image - cvInputGrey and uvInputGrey share the same memory region
-	//uvInputNV12 has the NV12 image - the first plane, cvInputGrey and uvInputGrey share the same memory region
+	//uvInputGrey has the grey image - cvInputGrey and uvInputGrey 
+    //                                  share the same memory region
+	//uvInputNV12 has the NV12 image - the first plane, cvInputGrey and 
+    //                                  uvInputGrey share the same memory region
 	//For 1 NV12 pixel: YYYYYYYY UVUV
 	//For a 2-pixel NV12 frame: YYYYYYYYYYYYYYYY UVUVUVUV
 
@@ -150,37 +165,101 @@ void engineHeadband() {
 	//Don't conver to RGB
 	//Minimize the number of images and operations
 
-	uv_image add,thresh,u,v;
-	int momentX,momentY,area;
-	uv_create_image(width, height, UV_GRAY, &u);
-	uv_create_image(width, height, UV_GRAY, &v);
-	uv_create_image(width, height, UV_GRAY, &add);
-	uv_create_image(width, height, UV_GRAY, &thresh);
-	extractNV12toUV(DATA(uvInputNV12,1),DATA(u,0),DATA(v,0),DATA(add,0),DATA(thresh,0),cvInputGrey->imageData, width,height,&momentX,&momentY,&area);
+
+
+
+    //make 4 intermediate buffers
+    //these can all be removed, they are simply for debuging
+	uv_image add_image,thresh_image,us_image,vs_image;
+	uv_create_image(width, height, UV_GRAY, &us_image);
+	uv_create_image(width, height, UV_GRAY, &vs_image);
+	uv_create_image(width, height, UV_GRAY, &add_image);
+	uv_create_image(width, height, UV_GRAY, &thresh_image);
+
+    //extract the byte arrays for each image
+    char *uv,*us,*vs,*add,*thresh,*image;
+    uv = DATA(uvInputNV12,1);
+    us = DATA(us_image,0);
+    vs = DATA(vs_image,0);
+    add = DATA(add_image,0);
+    thresh = DATA(thresh_image,0);
+    image = cvInputGrey->imageData;
+
+	int i, j;
+	int area = 0;
+	int momentX = 0;
+	int momentY = 0;
+	int min = 255;
+	int max = 0;
+
+    //loop through the image
+	for (j = 0; j < h; j+=2)
+		for (i = 0; i < w; i+=2) {
+            //pull out the u and v components of this pixel
+			char u, v;
+			u = uv[((int)(j/2)) * w + ((int)(i/2)) * 2];
+			v = uv[((int)(j/2)) * w + ((int)(i/2)) * 2 + 1];
+
+			int index = ((int)(j/2)) * w + ((int)(i/2)) * 2;
+			us[index] = u;
+			vs[index] = v;
+            //take the average of u and v and then invert
+			int val = 255-(u+v)/2;
+			add[index] = val;
+
+            //find the max and min values of the image, for normalization
+			if(val < min)
+				min = val;
+			if(val > max)
+				max = val;
+
+            //normalize the values
+			val = (val-filtered_min)*(255/(filtered_max-filtered_min));
+
+            //threshold the values
+			if(val < 200){
+				thresh[index] = 0;
+			}
+			else{
+				thresh[index] = 255;
+                //find the center of mass and area of the thresholded region
+				area += 1;
+				momentX += i;
+				momentY += j;
+			}
+		}
+
+    //filter the min and max values of the image
+	filtered_min = min*norm_alpha + (1-norm_alpha)*filtered_min;
+	filtered_max = max*norm_alpha + (1-norm_alpha)*filtered_max;
+
+	if(area>0){
+		momentX /= area;
+		momentY /= area;
+	}
+
+    //filter the location and area
+	filtered_x = momentX*location_alpha + (1-location_alpha)*filtered_x;
+	filtered_y = momentY*location_alpha + (1-location_alpha)*filtered_y;
+	filtered_area = area*area_alpha + (1-area_alpha)*filtered_area;
+
+    //display a black box at the filtered location on the grey image
+	for(i = (int)filtered_x-5; i<(int)filtered_x+5; i++)
+		for(j = (int)filtered_y-5; j<(int)filtered_y+5; j++)
+			if(i>=0 && j>=0 && i<w && j<h)
+				image[w*j + i] = 0;
 
 	//cvInputGrey->imageData = add.channel_data[0].pdata;
 
 	if (output & OUTPUT_VIDEO) {
-#if 1
-		//To show in black&white, uncomment this:
 		cvShowImage("OUTPUT WINDOW", cvInputGrey);
-#else
-		//To show in color, uncomment this:
-		IplImage *cvRGB = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 3);
-
-		convertNV12toRGB(uvInputNV12.channel_data[0].pdata, uvInputNV12.channel_data[1].pdata, cvRGB->imageData, width, height);
-		//convertNV12toRGB(add.channel_data[0].pdata, add.channel_data[1].pdata, cvRGB->imageData, width, height);
-
-		cvShowImage("OUTPUT WINDOW", cvRGB);
-		cvReleaseImage(&cvRGB);
-#endif
 	}
 
 	if (output & OUTPUT_MEMORY) {
 		struct structCVtoMPU2 data;
-		data.headbandx = momentX;
-		data.headbandy = momentY;
-		data.headbandarea = area;
+		data.headbandx = filtered_x;
+		data.headbandy = filtered_y;
+		data.headbandarea = filtered_area;
 		data.type = TYPE_PILOT_HEADBAND;
 		CVtoMPU2_Send(input <= 1, &data);
 	}
