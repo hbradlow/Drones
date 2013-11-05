@@ -73,7 +73,12 @@ void yuv420_rgb(unsigned char Y1, unsigned char Cb, unsigned char Cr, char *ER, 
 
 float filtered_min = 0;
 float filtered_max = 255;
-float alpha = .5;
+float filtered_x = 0;
+float filtered_y = 0;
+float filtered_area = 0;
+float location_alpha = .3;
+float area_alpha = .3;
+float norm_alpha = .5;
 void extractNV12toUV(char *uv, char *us, char *vs, char *add, char *thresh, char *image, int w, int h, int *output_momentX, int *output_momentY, int *output_area) {
 	int i, j;
 	int area = 0;
@@ -82,12 +87,13 @@ void extractNV12toUV(char *uv, char *us, char *vs, char *add, char *thresh, char
 	int min = 255;
 	int max = 0;
 
-	for (j = 0; j < h; j++)
-		for (i = 0; i < w; i++) {
+	for (j = 0; j < h; j+=2)
+		for (i = 0; i < w; i+=2) {
 			char u, v;
-			u = uv[((int)(j / 2)) * w + ((int)(i / 2)) * 2];
-			v = uv[((int)(j / 2)) * w + ((int)(i / 2)) * 2 + 1];
-			int index = (w*j) + i;
+			u = uv[((int)(j/2)) * w + ((int)(i/2)) * 2];
+			v = uv[((int)(j/2)) * w + ((int)(i/2)) * 2 + 1];
+
+			int index = ((int)(j/2)) * w + ((int)(i/2)) * 2;
 			us[index] = u;
 			vs[index] = v;
 			int val = 255-(u+v)/2;
@@ -110,26 +116,31 @@ void extractNV12toUV(char *uv, char *us, char *vs, char *add, char *thresh, char
 			}
 		}
 
-	filtered_min = min*alpha + (1-alpha)*filtered_min;
-	filtered_max = max*alpha + (1-alpha)*filtered_max;
+	filtered_min = min*norm_alpha + (1-norm_alpha)*filtered_min;
+	filtered_max = max*norm_alpha + (1-norm_alpha)*filtered_max;
 
 	if(area>0){
 		momentX /= area;
 		momentY /= area;
-
-		for(i = momentX-5; i<momentX+5; i++)
-			for(j = momentY-5; j<momentY+5; j++)
-				if(i>=0 && j>=0 && i<w && j<h)
-					image[w*j + i] = 0;
-
 		//printf("Moment %d, %d, %d\n",momentX,momentY,area);
 	}
 	else{
 		//printf("No area\n");
 	}
-	*output_momentX = momentX;
-	*output_momentY = momentY;
-	*output_area = area;
+	filtered_x = momentX*location_alpha + (1-location_alpha)*filtered_x;
+	filtered_y = momentY*location_alpha + (1-location_alpha)*filtered_y;
+	filtered_area = area*area_alpha + (1-area_alpha)*filtered_area;
+
+	for(i = (int)filtered_x-5; i<(int)filtered_x+5; i++)
+		for(j = (int)filtered_y-5; j<(int)filtered_y+5; j++)
+			if(i>=0 && j>=0 && i<w && j<h)
+				image[w*j + i] = 0;
+
+
+	*output_momentX = filtered_x;
+	*output_momentY = filtered_y;
+	*output_area = filtered_area;
+	//printf("Area %d\n",filtered_area);
 }
 void convertNV12toRGB(char *y, char *uv, char *rgb, int w, int h) {
 	int i, j;

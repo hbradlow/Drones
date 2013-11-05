@@ -158,7 +158,7 @@ void engineHeadband() {
 	uv_create_image(width, height, UV_GRAY, &thresh);
 	extractNV12toUV(DATA(uvInputNV12,1),DATA(u,0),DATA(v,0),DATA(add,0),DATA(thresh,0),cvInputGrey->imageData, width,height,&momentX,&momentY,&area);
 
-	//cvInputGrey->imageData = thresh.channel_data[0].pdata;
+	//cvInputGrey->imageData = add.channel_data[0].pdata;
 
 	if (output & OUTPUT_VIDEO) {
 #if 1
