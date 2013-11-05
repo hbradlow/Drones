@@ -193,14 +193,14 @@ void engineHeadband() {
 	int max = 0;
 
     //loop through the image
-	for (j = 0; j < h; j+=2)
-		for (i = 0; i < w; i+=2) {
+	for (j = 0; j < height; j+=2)
+		for (i = 0; i < width; i+=2) {
             //pull out the u and v components of this pixel
 			char u, v;
-			u = uv[((int)(j/2)) * w + ((int)(i/2)) * 2];
-			v = uv[((int)(j/2)) * w + ((int)(i/2)) * 2 + 1];
+			u = uv[((int)(j/2)) * width + ((int)(i/2)) * 2];
+			v = uv[((int)(j/2)) * width + ((int)(i/2)) * 2 + 1];
 
-			int index = ((int)(j/2)) * w + ((int)(i/2)) * 2;
+			int index = ((int)(j/2)) * width + ((int)(i/2)) * 2;
 			us[index] = u;
 			vs[index] = v;
             //take the average of u and v and then invert
@@ -246,8 +246,8 @@ void engineHeadband() {
     //display a black box at the filtered location on the grey image
 	for(i = (int)filtered_x-5; i<(int)filtered_x+5; i++)
 		for(j = (int)filtered_y-5; j<(int)filtered_y+5; j++)
-			if(i>=0 && j>=0 && i<w && j<h)
-				image[w*j + i] = 0;
+			if(i>=0 && j>=0 && i<width && j<height)
+				image[width*j + i] = 0;
 
 	//cvInputGrey->imageData = add.channel_data[0].pdata;
 
